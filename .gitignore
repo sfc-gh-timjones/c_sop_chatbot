@@ -1,0 +1,6 @@
+.snowflake/
+.DS_Store
+*.pyc
+__pycache__/
+generate_sop.py
+generate_sops.py
