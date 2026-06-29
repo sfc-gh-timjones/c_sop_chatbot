@@ -75,7 +75,7 @@ and run it as `ACCOUNTADMIN`. The script will:
 3. Run scripts 01 → 04 via `EXECUTE IMMEDIATE FROM` — including PDF copy, parse, chunk, and index
 4. Clean up the temporary deploy objects
 
-Once complete, open **Snowflake Intelligence** and find the **ARC Assistant** agent card.
+Once complete, open **Snowflake Cowork** and find the **ARC Assistant** agent card.
 
 ---
 
