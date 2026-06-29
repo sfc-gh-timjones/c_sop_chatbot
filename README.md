@@ -9,7 +9,7 @@ Field technicians, dispatch, and billing staff can ask natural language question
 ## What It Does
 
 - Parses 20 customer SOP PDFs using `AI_PARSE_DOCUMENT`
-- Chunks each document and attaches customer metadata (`customer_name`, `customer_type`, `sop_id`) to every chunk
+- Chunks each document and attaches customer metadata (`customer_name`, `customer_type`, `sop_id`, `aliases`) to every chunk
 - Indexes everything in a single Cortex Search service (`ARC_CONTRACT_SEARCH`)
 - Exposes a Cortex Agent (`ARC_AGENT`) in Snowflake Intelligence that answers questions by searching the indexed contracts
 
@@ -48,7 +48,7 @@ Field technicians, dispatch, and billing staff can ask natural language question
 > automated path. Script `02_create_cortex_search.sql` contains a `COPY FILES FROM @ARC_DEPLOY.GIT...`
 > reference that only resolves while the rebuild is in progress — running that script
 > standalone (e.g. from a Workspace) will fail. If you need to run scripts individually,
-> upload PDFs manually via PUT first (see the commented block in `99_teardown.sql`).
+> upload PDFs manually via PUT first (see the commented PUT block at the top of `sql/02_create_cortex_search.sql`).
 
 ### Step 1: Create a Git API Integration
 

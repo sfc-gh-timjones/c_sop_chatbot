@@ -42,6 +42,16 @@ INSERT INTO ARC_CUSTOMER_REGISTRY VALUES
 
 -- =============================================================================
 -- STAGE: single stage for all customer SOP PDFs
+--
+-- INITIAL BUILD ONLY (before GitHub push): COPY FILES below won't work because
+-- the git repo object doesn't exist yet. Upload PDFs manually instead:
+--
+--   PUT file:///local/path/to/pdfs/CST0001_Safeway_Stores.pdf
+--       @CUSTOMER_DEMOS.ARC.ARC_DOCS_STAGE AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+--   -- repeat for each CST*.pdf, then:
+--   ALTER STAGE ARC_DOCS_STAGE REFRESH;
+--
+-- After GitHub push: COPY FILES works automatically via TEARDOWN_AND_REBUILD.
 -- =============================================================================
 
 CREATE OR REPLACE STAGE ARC_DOCS_STAGE
@@ -112,6 +122,9 @@ WHERE LENGTH(c.chunk_text) > 50;
 --                          stage has no matching registry entry and was silently
 --                          dropped from ARC_CONTRACT_DOCS.
 --   customers_indexed    : should be 20. Fewer means missing PDFs or registry gaps.
+--
+-- For production: replace with a hard assertion (e.g. a stored procedure that
+-- raises an error if customers_indexed <> 20) to halt the deploy on bad ingest.
 -- =============================================================================
 
 -- Files on stage with no registry match (expect 0 rows)
@@ -137,7 +150,7 @@ CREATE OR REPLACE CORTEX SEARCH SERVICE ARC_CONTRACT_SEARCH
   ON chunk_text
   ATTRIBUTES customer_name, customer_type, sop_id, aliases, file_name
   WAREHOUSE = ARC_WH
-  TARGET_LAG = '1 hour'
+  TARGET_LAG = '1 hour'  -- fine for demo; use '1 day' in production for static contracts
 AS (
   SELECT doc_id, sop_id, customer_name, customer_type, aliases, file_name, chunk_text
   FROM ARC_CONTRACT_DOCS
