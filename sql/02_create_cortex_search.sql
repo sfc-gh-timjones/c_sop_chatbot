@@ -5,39 +5,40 @@ USE WAREHOUSE ARC_WH;
 
 -- =============================================================================
 -- CUSTOMER REGISTRY TABLE
--- Replaces the inline metadata CTE in the parse/chunk query. Maintaining
--- customer metadata here makes it easy to add, rename, or update accounts
--- without touching the ingest logic.
+-- Single source of truth for customer metadata. The aliases column stores
+-- pipe-separated informal names (e.g. "Wingstop|WS Ops") so the agent can
+-- resolve what users actually type to the exact customer_name used for filtering.
 -- =============================================================================
 
 CREATE OR REPLACE TABLE ARC_CUSTOMER_REGISTRY (
   file_prefix    VARCHAR,   -- matches REGEXP_SUBSTR(filename, 'CST[0-9]+')
   sop_id         VARCHAR,
   customer_name  VARCHAR,
-  customer_type  VARCHAR
+  customer_type  VARCHAR,
+  aliases        VARCHAR    -- pipe-separated informal names and abbreviations
 );
 
 INSERT INTO ARC_CUSTOMER_REGISTRY VALUES
-  ('CST0001', 'CST-0001', 'Safeway Stores Inc.',                             'Grocery Chain'),
-  ('CST0002', 'CST-0002', 'Pacific Foods Distribution LLC',                  'Food Distribution / Cold Storage'),
-  ('CST0003', 'CST-0003', 'Sprouts Farmers Market - Region 7',               'Grocery Chain'),
-  ('CST0004', 'CST-0004', 'Golden State Foods - Livermore DC',               'Food Distribution / Cold Storage'),
-  ('CST0005', 'CST-0005', 'WS Operations LLC (Wingstop Franchisee)',         'Restaurant / QSR'),
-  ('CST0006', 'CST-0006', 'Stater Bros. Markets',                            'Grocery Chain'),
-  ('CST0007', 'CST-0007', 'ALDI Inc. - Southwest Division',                  'Grocery Chain'),
-  ('CST0008', 'CST-0008', 'Raley''s Family of Stores',                       'Grocery Chain'),
-  ('CST0009', 'CST-0009', 'Trader Joe''s Company - Western Service Area',    'Grocery Chain'),
-  ('CST0010', 'CST-0010', 'Sysco Los Angeles LLC',                           'Food Distribution / Cold Storage'),
-  ('CST0011', 'CST-0011', 'Food 4 Less - TAG Service Division',              'Grocery Chain'),
-  ('CST0012', 'CST-0012', 'Smart & Final Stores LLC',                        'Grocery Chain'),
-  ('CST0013', 'CST-0013', 'Cold Star Logistics Inc.',                        '3PL Cold Storage / Logistics'),
-  ('CST0014', 'CST-0014', 'PBI Group LLC (Panera Bread Franchisee)',         'Restaurant / Bakery-Cafe'),
-  ('CST0015', 'CST-0015', 'Whole Foods Market - NorCal Region',              'Grocery Chain - Natural/Organic'),
-  ('CST0016', 'CST-0016', 'Casey''s General Stores - Pacific Division',      'Convenience Store / Fuel Retail'),
-  ('CST0017', 'CST-0017', 'Costco Wholesale - Business Center Refrigeration','Warehouse Retail'),
-  ('CST0018', 'CST-0018', 'Nugget Markets Inc.',                             'Grocery Chain - Independent'),
-  ('CST0019', 'CST-0019', 'BJ''s Wholesale Club - Western Expansion Sites',  'Warehouse Retail'),
-  ('CST0020', 'CST-0020', 'Albertsons Companies - Division 13 (SoCal)',      'Grocery Chain');
+  ('CST0001', 'CST-0001', 'Safeway Stores Inc.',                             'Grocery Chain',                      'Safeway|Safeway Stores'),
+  ('CST0002', 'CST-0002', 'Pacific Foods Distribution LLC',                  'Food Distribution / Cold Storage',   'Pacific Foods|Pacific Foods Dist|Pacific Foods Distribution'),
+  ('CST0003', 'CST-0003', 'Sprouts Farmers Market - Region 7',               'Grocery Chain',                      'Sprouts|Sprouts Farmers Market|Sprouts Region 7'),
+  ('CST0004', 'CST-0004', 'Golden State Foods - Livermore DC',               'Food Distribution / Cold Storage',   'Golden State Foods|GSF|Golden State'),
+  ('CST0005', 'CST-0005', 'WS Operations LLC (Wingstop Franchisee)',         'Restaurant / QSR',                   'Wingstop|WS Ops|WS Operations|Wing Stop'),
+  ('CST0006', 'CST-0006', 'Stater Bros. Markets',                            'Grocery Chain',                      'Stater Bros|Stater Brothers|Stater'),
+  ('CST0007', 'CST-0007', 'ALDI Inc. - Southwest Division',                  'Grocery Chain',                      'ALDI|Aldi|ALDI Southwest'),
+  ('CST0008', 'CST-0008', 'Raley''s Family of Stores',                       'Grocery Chain',                      'Raley''s|Raleys|Raley'),
+  ('CST0009', 'CST-0009', 'Trader Joe''s Company - Western Service Area',    'Grocery Chain',                      'Trader Joe''s|Trader Joes|TJ''s|TJs'),
+  ('CST0010', 'CST-0010', 'Sysco Los Angeles LLC',                           'Food Distribution / Cold Storage',   'Sysco|Sysco LA|Sysco Los Angeles'),
+  ('CST0011', 'CST-0011', 'Food 4 Less - TAG Service Division',              'Grocery Chain',                      'Food 4 Less|Food for Less|Food4Less|F4L'),
+  ('CST0012', 'CST-0012', 'Smart & Final Stores LLC',                        'Grocery Chain',                      'Smart and Final|Smart & Final|Smart Final'),
+  ('CST0013', 'CST-0013', 'Cold Star Logistics Inc.',                        '3PL Cold Storage / Logistics',       'Cold Star|Cold Star Logistics'),
+  ('CST0014', 'CST-0014', 'PBI Group LLC (Panera Bread Franchisee)',         'Restaurant / Bakery-Cafe',           'Panera|Panera Bread|PBI|PBI Group'),
+  ('CST0015', 'CST-0015', 'Whole Foods Market - NorCal Region',              'Grocery Chain - Natural/Organic',    'Whole Foods|Whole Foods NorCal|Whole Foods Market'),
+  ('CST0016', 'CST-0016', 'Casey''s General Stores - Pacific Division',      'Convenience Store / Fuel Retail',    'Casey''s|Casey|Casey General|Casey''s Pacific'),
+  ('CST0017', 'CST-0017', 'Costco Wholesale - Business Center Refrigeration','Warehouse Retail',                   'Costco|Costco Business Center|Costco Wholesale'),
+  ('CST0018', 'CST-0018', 'Nugget Markets Inc.',                             'Grocery Chain - Independent',        'Nugget|Nugget Markets'),
+  ('CST0019', 'CST-0019', 'BJ''s Wholesale Club - Western Expansion Sites',  'Warehouse Retail',                   'BJ''s|BJs|BJ''s Wholesale|BJ''s West'),
+  ('CST0020', 'CST-0020', 'Albertsons Companies - Division 13 (SoCal)',      'Grocery Chain',                      'Albertsons|Albertson''s|Albertsons Div 13|Albertsons Division 13');
 
 -- =============================================================================
 -- STAGE: single stage for all customer SOP PDFs
@@ -61,6 +62,8 @@ ALTER STAGE ARC_DOCS_STAGE REFRESH;
 -- Each PDF is parsed into text, chunked, then joined against ARC_CUSTOMER_REGISTRY
 -- so every chunk row carries structured customer metadata. This ensures the agent
 -- can filter by customer_name at query time rather than inferring it from text.
+-- The aliases column is included so the agent can resolve informal names to the
+-- correct legal customer_name before applying @eq filters.
 -- =============================================================================
 
 CREATE OR REPLACE TABLE ARC_CONTRACT_DOCS AS
@@ -93,6 +96,7 @@ SELECT
   r.sop_id,
   r.customer_name,
   r.customer_type,
+  r.aliases,
   c.file_name,
   c.chunk_index,
   c.chunk_text
@@ -127,10 +131,10 @@ FROM ARC_CONTRACT_DOCS;
 
 CREATE OR REPLACE CORTEX SEARCH SERVICE ARC_CONTRACT_SEARCH
   ON chunk_text
-  ATTRIBUTES customer_name, customer_type, sop_id, file_name
+  ATTRIBUTES customer_name, customer_type, sop_id, aliases, file_name
   WAREHOUSE = ARC_WH
   TARGET_LAG = '1 hour'
 AS (
-  SELECT doc_id, sop_id, customer_name, customer_type, file_name, chunk_text
+  SELECT doc_id, sop_id, customer_name, customer_type, aliases, file_name, chunk_text
   FROM ARC_CONTRACT_DOCS
 );

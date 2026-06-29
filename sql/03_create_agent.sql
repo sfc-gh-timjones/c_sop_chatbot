@@ -38,11 +38,24 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
     orchestration: >
       All questions should be answered using ContractSearch.
 
-      FILTERING RULES — always apply before searching:
-      - When the user names a specific customer (e.g. "Safeway", "Raley's", "Sysco LA"),
-        filter ContractSearch on customer_name using an exact @eq match.
-        Example: user asks about "Whole Foods NorCal" → filter customer_name =
-        "Whole Foods Market - NorCal Region"
+      CUSTOMER NAME RESOLUTION — do this before filtering:
+      Each search result includes an aliases field (pipe-separated informal names)
+      and a customer_name field (exact legal name). When the user names a customer
+      informally, scan the aliases in returned results to identify the matching
+      customer_name, then use that exact legal name for @eq filtering.
+      Examples of informal -> legal name resolution:
+        "Safeway" or "Safeway Stores"           -> "Safeway Stores Inc."
+        "Wingstop" or "WS Ops"                  -> "WS Operations LLC (Wingstop Franchisee)"
+        "Panera" or "PBI"                        -> "PBI Group LLC (Panera Bread Franchisee)"
+        "Whole Foods" or "Whole Foods NorCal"   -> "Whole Foods Market - NorCal Region"
+        "Costco" or "Costco Business Center"    -> "Costco Wholesale - Business Center Refrigeration"
+        "Sysco" or "Sysco LA"                   -> "Sysco Los Angeles LLC"
+        "Trader Joe's" or "TJ's"                -> "Trader Joe's Company - Western Service Area"
+        "BJ's" or "BJs"                         -> "BJ's Wholesale Club - Western Expansion Sites"
+
+      FILTERING RULES — apply after resolving the customer name:
+      - When the user names a specific customer, filter ContractSearch on
+        customer_name using an exact @eq match with the resolved legal name.
       - When the user asks a segment question (e.g. "which grocery chain customers",
         "all restaurant accounts"), filter on customer_type before searching.
       - When no specific customer is named, run an unfiltered search and clearly
@@ -50,7 +63,7 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
 
       For cross-customer comparisons (e.g. "which customers include door gaskets"),
       run separate filtered searches per relevant customer or per customer_type segment
-      and synthesize the results. Increase max_results if needed.
+      and synthesize the results.
 
       Always state which customer the answer applies to and reference the specific
       contract terms found. If a question is ambiguous about which customer, ask
@@ -86,7 +99,8 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           billing and invoicing rules, after-hours and night call policies,
           equipment exclusions, refrigerant phaseout requirements,
           and any other contract terms for a specific customer.
-          When the user names a customer, always filter on customer_name with @eq.
+          When the user names a customer, resolve informal names via the aliases
+          field, then filter on customer_name with @eq using the exact legal name.
           When the user asks about a segment, filter on customer_type.
 
     - tool_spec:
@@ -107,7 +121,7 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           searchable: true
           filterable: false
         customer_name:
-          description: "Exact customer legal name (e.g. 'Safeway Stores Inc.', 'Raley''s Family of Stores'). Always filter with @eq when the user asks about a specific customer."
+          description: "Exact customer legal name (e.g. 'Safeway Stores Inc.', 'Raley''s Family of Stores', 'WS Operations LLC (Wingstop Franchisee)'). Always filter with @eq using the exact legal name after resolving from aliases."
           type: "string"
           searchable: false
           filterable: true
@@ -121,6 +135,11 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           type: "string"
           searchable: false
           filterable: true
+        aliases:
+          description: "Pipe-separated informal names and abbreviations for this customer (e.g. 'Wingstop|WS Ops|WS Operations' or 'Panera|Panera Bread|PBI'). When a user names a customer informally, match their input against this field to identify the correct customer_name for @eq filtering."
+          type: "string"
+          searchable: false
+          filterable: false
   $$;
 
 -- Register agent with Snowflake Intelligence for UI visibility
