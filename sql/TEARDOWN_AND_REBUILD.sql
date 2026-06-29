@@ -1,25 +1,28 @@
-/*******************************************************************************
+/***************************************************************************************************
   ARC ASSISTANT — One-Click Deployment
 
-  Tears down any existing ARC demo objects and rebuilds from scratch using
-  scripts sourced directly from the GitHub repo.
+  This script:
+    1. Creates a Git repo integration to pull scripts directly from GitHub
+    2. Tears down any existing ARC demo objects (safe to run fresh)
+    3. Runs all setup scripts (01 -> 04) via EXECUTE IMMEDIATE FROM
 
-  PDFs are copied automatically from the repo's pdfs/ folder into the internal
-  stage in script 02. No manual upload step required after GitHub push.
-
-  Prerequisites:
-    - GIT_HUB_INTEGRATION API integration must exist (see README Step 1)
-    - Run as ACCOUNTADMIN
-*******************************************************************************/
+  PDFs are copied automatically from the Git repo into the internal stage in script 02.
+  No manual upload step is required.
+***************************************************************************************************/
 
 USE ROLE ACCOUNTADMIN;
-CREATE WAREHOUSE IF NOT EXISTS ARC_DEPLOY_WH
-  WAREHOUSE_SIZE = 'XSMALL'
-  AUTO_SUSPEND = 60
-  AUTO_RESUME = TRUE;
+CREATE WAREHOUSE IF NOT EXISTS ARC_DEPLOY_WH WAREHOUSE_SIZE = 'XSMALL' AUTO_SUSPEND = 60 AUTO_RESUME = TRUE;
 USE WAREHOUSE ARC_DEPLOY_WH;
 
--- GIT_HUB_INTEGRATION is required — uncomment if it doesn't exist yet:
+/*=============================================================================
+  1. GIT REPO INTEGRATION
+
+  If you followed the README instructions, this integration already exists
+  and the block below will do nothing. If you skipped that step or are unsure,
+  you can safely uncomment and run it — IF NOT EXISTS means it will only
+  create the integration if it isn't already there.
+=============================================================================*/
+
 -- CREATE API INTEGRATION IF NOT EXISTS GIT_HUB_INTEGRATION
 --   API_PROVIDER = git_https_api
 --   API_ALLOWED_PREFIXES = ('https://github.com/')
@@ -34,14 +37,30 @@ CREATE OR REPLACE GIT REPOSITORY ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO
 
 ALTER GIT REPOSITORY ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO FETCH;
 
--- Teardown (safe even on first run)
+/*=============================================================================
+  2. TEARDOWN (safe even on first run)
+=============================================================================*/
+
 EXECUTE IMMEDIATE FROM @ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO/branches/main/sql/99_teardown.sql;
 
--- Rebuild
+/*=============================================================================
+  3. REBUILD (runs in order: 01 -> 04)
+=============================================================================*/
+
 EXECUTE IMMEDIATE FROM @ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO/branches/main/sql/01_database_and_schema.sql;
 EXECUTE IMMEDIATE FROM @ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO/branches/main/sql/02_create_cortex_search.sql;
 EXECUTE IMMEDIATE FROM @ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO/branches/main/sql/03_create_agent.sql;
 EXECUTE IMMEDIATE FROM @ARC_DEPLOY.GIT.C_SOP_CHATBOT_REPO/branches/main/sql/04_grants.sql;
+
+/*=============================================================================
+  DONE!
+
+  The demo environment is ready. Open Snowflake Intelligence -> ARC Assistant.
+  Verify objects:
+    SHOW AGENTS IN SCHEMA CUSTOMER_DEMOS.ARC;
+    SHOW CORTEX SEARCH SERVICES IN SCHEMA CUSTOMER_DEMOS.ARC;
+    SELECT COUNT(DISTINCT sop_id) AS customers_indexed FROM CUSTOMER_DEMOS.ARC.ARC_CONTRACT_DOCS;
+=============================================================================*/
 
 DROP DATABASE IF EXISTS ARC_DEPLOY;
 DROP WAREHOUSE IF EXISTS ARC_DEPLOY_WH;
