@@ -81,7 +81,7 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
       - question: "Is coil cleaning included for Whole Foods NorCal?"
         answer: "I will filter on Whole Foods Market - NorCal Region and check coil cleaning scope."
       - question: "What is the emergency response SLA for Costco Business Centers?"
-        answer: "I will filter on Costco Wholesale and look up emergency response time commitments."
+        answer: "I will resolve 'Costco' via aliases to 'Costco Wholesale - Business Center Refrigeration', filter with @eq, and look up emergency response time commitments."
       - question: "Which of our grocery chain customers include door gaskets in the contract?"
         answer: "I will filter on customer_type Grocery Chain and search for door gasket coverage."
 
@@ -102,11 +102,6 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           When the user names a customer, resolve informal names via the aliases
           field, then filter on customer_name with @eq using the exact legal name.
           When the user asks about a segment, filter on customer_type.
-
-    - tool_spec:
-        type: "data_to_chart"
-        name: "data_to_chart"
-        description: "Generate charts and visual comparisons from data. Use when the user wants to visually compare terms across multiple customers."
 
   tool_resources:
     ContractSearch:
@@ -142,6 +137,9 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           filterable: false
   $$;
 
--- Register agent with Snowflake Intelligence for UI visibility
+-- Register agent with Snowflake Intelligence for UI visibility.
+-- DROP first makes this idempotent — safe to run 03 alone multiple times.
+ALTER SNOWFLAKE INTELLIGENCE SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT
+  DROP AGENT IF EXISTS CUSTOMER_DEMOS.ARC.ARC_AGENT;
 ALTER SNOWFLAKE INTELLIGENCE SNOWFLAKE_INTELLIGENCE_OBJECT_DEFAULT
   ADD AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT;

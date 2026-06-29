@@ -106,11 +106,15 @@ WHERE LENGTH(c.chunk_text) > 50;
 
 -- =============================================================================
 -- INGEST VALIDATION
--- Fail fast if any PDFs on stage have no matching registry entry, or if the
--- expected customer count doesn't match.
+-- These are informational SELECT statements — review the result sets before
+-- proceeding to CREATE CORTEX SEARCH SERVICE.
+--   unmatched_file query : should return 0 rows. Any row here means a PDF on
+--                          stage has no matching registry entry and was silently
+--                          dropped from ARC_CONTRACT_DOCS.
+--   customers_indexed    : should be 20. Fewer means missing PDFs or registry gaps.
 -- =============================================================================
 
--- Files on stage with no registry match (should return 0 rows)
+-- Files on stage with no registry match (expect 0 rows)
 SELECT
   RELATIVE_PATH AS unmatched_file
 FROM DIRECTORY(@ARC_DOCS_STAGE)
@@ -119,7 +123,7 @@ WHERE RELATIVE_PATH ILIKE 'CST%.pdf'
     SELECT file_prefix FROM ARC_CUSTOMER_REGISTRY
   );
 
--- Customer count check (should be 20)
+-- Customer count check (expect customers_indexed = 20)
 SELECT
   COUNT(DISTINCT sop_id)  AS customers_indexed,
   COUNT(*)                AS total_chunks

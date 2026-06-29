@@ -44,9 +44,15 @@ Field technicians, dispatch, and billing staff can ask natural language question
 
 ## Quick Start
 
-### Step 1: Create a Git API Integration & Connect Your Workspace
+> **One deploy path:** Use `sql/TEARDOWN_AND_REBUILD.sql`. This is the only supported
+> automated path. Script `02_create_cortex_search.sql` contains a `COPY FILES FROM @ARC_DEPLOY.GIT...`
+> reference that only resolves while the rebuild is in progress — running that script
+> standalone (e.g. from a Workspace) will fail. If you need to run scripts individually,
+> upload PDFs manually via PUT first (see the commented block in `99_teardown.sql`).
 
-1. Open a blank SQL file in Snowsight and run as `ACCOUNTADMIN`:
+### Step 1: Create a Git API Integration
+
+Open a blank SQL file in Snowsight and run as `ACCOUNTADMIN`:
 
 ```sql
 USE ROLE ACCOUNTADMIN;
@@ -57,16 +63,17 @@ CREATE API INTEGRATION IF NOT EXISTS GIT_HUB_INTEGRATION
   ENABLED = TRUE;
 ```
 
-2. In Snowsight, go to **Projects → Workspaces**, click the dropdown next to your workspace name, and select **From Git repository**.
-3. Fill in:
-   - Repository URL: `https://github.com/sfc-gh-timjones/c_sop_chatbot`
-   - API integration: `GIT_HUB_INTEGRATION`
-   - Repository access: Public repository
-4. Click **Create**.
+> Skip this step if `GIT_HUB_INTEGRATION` already exists in your account.
 
 ### Step 2: Deploy
 
-Open `sql/TEARDOWN_AND_REBUILD.sql` from the workspace file pane and run it. This tears down any existing objects, copies the PDFs from the repo, parses and indexes them, and creates the agent.
+Open a new SQL worksheet in Snowsight, paste the contents of `sql/TEARDOWN_AND_REBUILD.sql`,
+and run it as `ACCOUNTADMIN`. The script will:
+
+1. Create a temporary Git repository object pointing to this repo
+2. Tear down any existing ARC objects (safe on first run)
+3. Run scripts 01 → 04 via `EXECUTE IMMEDIATE FROM` — including PDF copy, parse, chunk, and index
+4. Clean up the temporary deploy objects
 
 Once complete, open **Snowflake Intelligence** and find the **ARC Assistant** agent card.
 
