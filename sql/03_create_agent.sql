@@ -37,26 +37,40 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
 
     orchestration: >
       All questions should be answered using ContractSearch.
-      Search for the relevant customer SOP to find the specific contract terms.
-      Always state which customer the answer applies to and reference the specific terms found.
-      If asked about multiple customers, search for each one and compare results.
-      If a question is ambiguous about which customer, ask for clarification before searching.
+
+      FILTERING RULES — always apply before searching:
+      - When the user names a specific customer (e.g. "Safeway", "Raley's", "Sysco LA"),
+        filter ContractSearch on customer_name using an exact @eq match.
+        Example: user asks about "Whole Foods NorCal" → filter customer_name =
+        "Whole Foods Market - NorCal Region"
+      - When the user asks a segment question (e.g. "which grocery chain customers",
+        "all restaurant accounts"), filter on customer_type before searching.
+      - When no specific customer is named, run an unfiltered search and clearly
+        attribute each answer to the customer it came from.
+
+      For cross-customer comparisons (e.g. "which customers include door gaskets"),
+      run separate filtered searches per relevant customer or per customer_type segment
+      and synthesize the results. Increase max_results if needed.
+
+      Always state which customer the answer applies to and reference the specific
+      contract terms found. If a question is ambiguous about which customer, ask
+      for clarification before searching.
 
     sample_questions:
       - question: "Can I charge Safeway a trip fee?"
-        answer: "I will search the Safeway SOP for trip charge policy."
+        answer: "I will filter ContractSearch on Safeway Stores Inc. and look up trip charge terms."
       - question: "What refrigerant top-off is included for Raley's?"
-        answer: "I will look up the Raley's contract for refrigerant allowance terms."
+        answer: "I will filter on Raley's Family of Stores and look up refrigerant allowance terms."
       - question: "Does the Sysco LA contract cover all emergency calls with no trip charge?"
-        answer: "I will check the Sysco Los Angeles SOP for emergency call and trip charge terms."
+        answer: "I will filter on Sysco Los Angeles LLC and check emergency call and trip charge terms."
       - question: "Which customers require special dispatch approval before I can be sent out?"
         answer: "I will search all SOPs for special dispatch procedure requirements."
       - question: "Is coil cleaning included for Whole Foods NorCal?"
-        answer: "I will search the Whole Foods NorCal SOP for coil cleaning scope."
+        answer: "I will filter on Whole Foods Market - NorCal Region and check coil cleaning scope."
       - question: "What is the emergency response SLA for Costco Business Centers?"
-        answer: "I will look up the Costco contract for emergency response time commitments."
+        answer: "I will filter on Costco Wholesale and look up emergency response time commitments."
       - question: "Which of our grocery chain customers include door gaskets in the contract?"
-        answer: "I will search the SOPs to find which grocery customers have door gaskets covered."
+        answer: "I will filter on customer_type Grocery Chain and search for door gasket coverage."
 
   tools:
     - tool_spec:
@@ -72,6 +86,8 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
           billing and invoicing rules, after-hours and night call policies,
           equipment exclusions, refrigerant phaseout requirements,
           and any other contract terms for a specific customer.
+          When the user names a customer, always filter on customer_name with @eq.
+          When the user asks about a segment, filter on customer_type.
 
     - tool_spec:
         type: "data_to_chart"
@@ -81,9 +97,30 @@ CREATE OR REPLACE AGENT CUSTOMER_DEMOS.ARC.ARC_AGENT
   tool_resources:
     ContractSearch:
       name: "CUSTOMER_DEMOS.ARC.ARC_CONTRACT_SEARCH"
-      max_results: "10"
+      max_results: "15"
       title_column: "customer_name"
       id_column: "doc_id"
+      columns_and_descriptions:
+        chunk_text:
+          description: "Contract SOP text containing billing terms, service coverage, policies, and special requirements. This is the primary search column."
+          type: "string"
+          searchable: true
+          filterable: false
+        customer_name:
+          description: "Exact customer legal name (e.g. 'Safeway Stores Inc.', 'Raley''s Family of Stores'). Always filter with @eq when the user asks about a specific customer."
+          type: "string"
+          searchable: false
+          filterable: true
+        customer_type:
+          description: "Customer segment: 'Grocery Chain', 'Grocery Chain - Natural/Organic', 'Grocery Chain - Independent', 'Food Distribution / Cold Storage', '3PL Cold Storage / Logistics', 'Restaurant / QSR', 'Restaurant / Bakery-Cafe', 'Convenience Store / Fuel Retail', 'Warehouse Retail'. Use to filter for cross-segment comparisons."
+          type: "string"
+          searchable: false
+          filterable: true
+        sop_id:
+          description: "SOP document identifier (e.g. 'CST-0001'). Use for exact document lookup by SOP number."
+          type: "string"
+          searchable: false
+          filterable: true
   $$;
 
 -- Register agent with Snowflake Intelligence for UI visibility

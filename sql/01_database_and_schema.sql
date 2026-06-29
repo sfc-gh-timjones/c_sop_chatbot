@@ -8,7 +8,11 @@ CREATE OR REPLACE WAREHOUSE ARC_WH
   AUTO_SUSPEND = 30
   AUTO_RESUME = TRUE;
 
-ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+-- Optional: enable cross-region Cortex inference if your account region doesn't
+-- have the required models available natively. This is an account-wide setting —
+-- review with your Snowflake account team before enabling, especially if you have
+-- data residency requirements.
+-- ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 
 USE DATABASE CUSTOMER_DEMOS;
 USE SCHEMA ARC;
